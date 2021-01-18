@@ -1,6 +1,7 @@
-﻿using ClearBank.DeveloperTest.Data;
+﻿using System;
+using ClearBank.DeveloperTest.Data;
 using ClearBank.DeveloperTest.Types;
-using System.Configuration;
+using ClearBank.DeveloperTest.PaymentSchemeValidators;
 
 namespace ClearBank.DeveloperTest.Services
 {
@@ -11,88 +12,47 @@ namespace ClearBank.DeveloperTest.Services
         I also feel this may benefit from Domain Driven Design along with EventSourcing 
         Other factors to consider; race conditions, idempotency,
     */
+
+    /*After thoughts on the project
+      Making the code asynchronous may improve efficient unless there are dependencies on third party libraries
+      Existing Code are broken and it's always returning False
+      Instead of having a negative list of requirements, it maybe safer to have an allowed list e.g. If Scheme and Account support Bacs then deduct money.
+    */
+
     public class PaymentService : IPaymentService
     {
+        private readonly IAccountRepository _accountRepository;
+        private readonly Func<PaymentScheme, IPaymentSchemeValidator> _paymentSchemeValidator;
+
+        public PaymentService(IAccountRepository accountRepository, Func<PaymentScheme, IPaymentSchemeValidator> paymentSchemeValidator)
+        {
+            _accountRepository = accountRepository;
+            _paymentSchemeValidator = paymentSchemeValidator;
+        }
+
         public MakePaymentResult MakePayment(MakePaymentRequest request)
         {
-            var dataStoreType = ConfigurationManager.AppSettings["DataStoreType"];
+            var account = _accountRepository.GetAccount(request.DebtorAccountNumber);
 
-            Account account = null;
-
-            if (dataStoreType == "Backup")
+            if (account == null)
             {
-                var accountDataStore = new BackupAccountDataStore();
-                account = accountDataStore.GetAccount(request.DebtorAccountNumber);
-            }
-            else
-            {
-                var accountDataStore = new AccountDataStore();
-                account = accountDataStore.GetAccount(request.DebtorAccountNumber);
+                //404 - account not found error
+                return new MakePaymentResult() { Success = false, ErrorCode = "AccountNotFound" };
             }
 
-            var result = new MakePaymentResult();
+            var isValid = _paymentSchemeValidator(request.PaymentScheme).IsValid(account, request);
 
-            switch (request.PaymentScheme)
+            if (!isValid)
             {
-                case PaymentScheme.Bacs:
-                    if (account == null)
-                    {
-                        result.Success = false;
-                    }
-                    else if (!account.AllowedPaymentSchemes.HasFlag(AllowedPaymentSchemes.Bacs))
-                    {
-                        result.Success = false;
-                    }
-                    break;
-
-                case PaymentScheme.FasterPayments:
-                    if (account == null)
-                    {
-                        result.Success = false;
-                    }
-                    else if (!account.AllowedPaymentSchemes.HasFlag(AllowedPaymentSchemes.FasterPayments))
-                    {
-                        result.Success = false;
-                    }
-                    else if (account.Balance < request.Amount)
-                    {
-                        result.Success = false;
-                    }
-                    break;
-
-                case PaymentScheme.Chaps:
-                    if (account == null)
-                    {
-                        result.Success = false;
-                    }
-                    else if (!account.AllowedPaymentSchemes.HasFlag(AllowedPaymentSchemes.Chaps))
-                    {
-                        result.Success = false;
-                    }
-                    else if (account.Status != AccountStatus.Live)
-                    {
-                        result.Success = false;
-                    }
-                    break;
+                //402 - TakePaymentFailed 
+                return new MakePaymentResult() { Success = false, ErrorCode = "PaymentSchemeUnsupported" };
             }
 
-            if (result.Success)
-            {
-                account.Balance -= request.Amount;
+            account.Balance -= request.Amount;
 
-                if (dataStoreType == "Backup")
-                {
-                    var accountDataStore = new BackupAccountDataStore();
-                    accountDataStore.UpdateAccount(account);
-                }
-                else
-                {
-                    var accountDataStore = new AccountDataStore();
-                    accountDataStore.UpdateAccount(account);
-                }
-            }
+            _accountRepository.UpdateAccount(account);
 
-            return result;
+            return new MakePaymentResult() { Success = true };
         }
     }
 }
