@@ -16,8 +16,4 @@
     <ProjectReference Include="..\ClearBank.DeveloperTest\ClearBank.DeveloperTest.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="PaymentSchemeValidators\" />
-  </ItemGroup>
-
 </Project>

@@ -17,6 +17,7 @@ namespace ClearBank.DeveloperTest.Services
       Making the code asynchronous may improve efficient unless there are dependencies on third party libraries
       Existing Code are broken and it's always returning False
       Instead of having a negative list of requirements, it maybe safer to have an allowed list e.g. If Scheme and Account support Bacs then deduct money.
+      I do not want to refactor those existing business rules in validators unless confirmed with stake holders that there are no adverse impact for reversing those if blocks
     */
 
     public class PaymentService : IPaymentService
