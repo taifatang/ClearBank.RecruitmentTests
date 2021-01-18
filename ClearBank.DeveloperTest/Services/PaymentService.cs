@@ -4,6 +4,13 @@ using System.Configuration;
 
 namespace ClearBank.DeveloperTest.Services
 {
+    /*Initiate thoughts on the project
+        DataStore can be refactored to behaviour polymorphically
+        A boolean value for "DataStoreType" feel more suited and less prone to typos and casing issues
+        I feel EventSourcing could be used here as failed attempt are also recorded
+        I also feel this may benefit from Domain Driven Design along with EventSourcing 
+        Other factors to consider; race conditions, idempotency,
+    */
     public class PaymentService : IPaymentService
     {
         public MakePaymentResult MakePayment(MakePaymentRequest request)
