@@ -45,8 +45,8 @@ namespace ClearBank.DeveloperTest.Services
 
             if (!isValid)
             {
-                //402 - TakePaymentFailed 
-                return new MakePaymentResult() { Success = false, ErrorCode = "PaymentSchemeUnsupported" };
+                //402 - TakePaymentFailed
+                return new MakePaymentResult() { Success = false, ErrorCode = "PaymentUnsupported" };
             }
 
             account.Balance -= request.Amount;

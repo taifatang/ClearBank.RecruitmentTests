@@ -24,7 +24,10 @@ namespace ClearBank.DeveloperTest.Tests.Services
 
             _paymentService = new PaymentService(_accountRepositoryMock.Object, _ => _paymentSchemeValidatorMock.Object);
 
-            _account = new Account();
+            _account = new Account()
+            {
+                AccountNumber = Guid.NewGuid().ToString()
+            };
 
             _accountRepositoryMock.Setup(x => x.GetAccount(It.IsAny<string>())).Returns(_account);
             _paymentSchemeValidatorMock.Setup(x => x.IsValid(It.IsAny<Account>(), It.IsAny<MakePaymentRequest>()))
@@ -43,11 +46,16 @@ namespace ClearBank.DeveloperTest.Tests.Services
         public void MakePayment_ReturnsFalse_ForAccountNotFound()
         {
             _accountRepositoryMock.Setup(x => x.GetAccount(It.IsAny<string>())).Returns((Account)null);
+            var request = new MakePaymentRequest()
+            {
+                DebtorAccountNumber = Guid.NewGuid().ToString()
+            };
 
-            var paymentResult = _paymentService.MakePayment(new MakePaymentRequest());
+            var paymentResult = _paymentService.MakePayment(request);
 
             Assert.IsFalse(paymentResult.Success);
             Assert.That(paymentResult.ErrorCode, Is.EqualTo("AccountNotFound"));
+            _accountRepositoryMock.Verify(x => x.GetAccount(request.DebtorAccountNumber), Times.Once);
         }
 
         [Test]
@@ -59,7 +67,7 @@ namespace ClearBank.DeveloperTest.Tests.Services
             var paymentResult = _paymentService.MakePayment(new MakePaymentRequest());
 
             Assert.IsFalse(paymentResult.Success);
-            Assert.That(paymentResult.ErrorCode, Is.EqualTo("PaymentSchemeUnsupported"));
+            Assert.That(paymentResult.ErrorCode, Is.EqualTo("PaymentUnsupported"));
         }
 
         [TestCase(10, 5, 5)]
